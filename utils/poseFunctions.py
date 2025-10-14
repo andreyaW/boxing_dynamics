@@ -200,55 +200,27 @@ def calculate_left_right_knee_flexion(pose_landmarker_result)-> np.ndarray:
     )
 
 
+def calculate_left_right_elbow_flexion(pose_landmarker_result) -> np.ndarray:
+    pose_world_landmarkers = pose_landmarker_result["landmarker_results"].pose_world_landmarks[0]
 
-def calculate_left_right_elbow_flexion(pose_landmarker_result)-> np.ndarray:
-    """
-    Calculate left and right elbow flexion angles from pose landmarks.
-    """
-    # Extract 3D pose landmarks (world coordinates) from the pose landmarker output
-    pose_world_landmarkers = pose_landmarker_result[
-        "landmarker_results"
-    ].pose_world_landmarks[0]
+    # --- Compute mid-hip as human frame origin ---
+    left_hip = get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, mp_pose.PoseLandmark.LEFT_HIP)
+    right_hip = get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, mp_pose.PoseLandmark.RIGHT_HIP)
+    hip_mid = (left_hip + right_hip) / 2.0
 
-    # Helper function: compute the vector from one joint (proximal) to another (distal)
-    # in the human reference frame.
-    calculate_limb_vector = lambda proximal_kp, distal_kp: get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, proximal_kp) - get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, distal_kp)
+    # --- Translate all landmark coordinates to human-centered frame ---
+    def kp(k):
+        return get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, k) - hip_mid
 
+    # --- Define limb vectors in this local frame ---
+    left_forearm = kp(mp_pose.PoseLandmark.LEFT_ELBOW) - kp(mp_pose.PoseLandmark.LEFT_WRIST)
+    right_forearm = kp(mp_pose.PoseLandmark.RIGHT_ELBOW) - kp(mp_pose.PoseLandmark.RIGHT_WRIST)
 
-    # ----------------------------
-    # Define limb vectors for forearm (elbow → wrist)
-    left_forearm = calculate_limb_vector(
-        mp_pose.PoseLandmark.LEFT_ELBOW,
-        mp_pose.PoseLandmark.LEFT_WRIST,
-    )
-    right_forearm = calculate_limb_vector(
-        mp_pose.PoseLandmark.RIGHT_ELBOW,
-        mp_pose.PoseLandmark.RIGHT_WRIST,
-    )
+    left_upper_arm = kp(mp_pose.PoseLandmark.LEFT_ELBOW) - kp(mp_pose.PoseLandmark.LEFT_SHOULDER)
+    right_upper_arm = kp(mp_pose.PoseLandmark.RIGHT_ELBOW) - kp(mp_pose.PoseLandmark.RIGHT_SHOULDER)
 
-    # Define limb vectors for upper arm (elbow → shoulder)
-    left_upper_arm = calculate_limb_vector(
-        mp_pose.PoseLandmark.LEFT_ELBOW,
-        mp_pose.PoseLandmark.LEFT_SHOULDER,
-    )
-    right_upper_arm = calculate_limb_vector(
-        mp_pose.PoseLandmark.RIGHT_ELBOW,
-        mp_pose.PoseLandmark.RIGHT_SHOULDER,
-    )
+    # --- Compute flexion angles ---
+    left_angle = calculate_nominal_joint_angle(left_upper_arm, left_forearm)
+    right_angle = calculate_nominal_joint_angle(right_upper_arm, right_forearm)
 
-    # ----------------------------
-    # Calculate flexion angle at each elbow
-    # The angle is computed between the upper arm vector and the forearm vector.
-    left_elbow_flex_angle = calculate_nominal_joint_angle(
-        left_upper_arm, left_forearm
-    )
-    right_elbow_flex_angle = calculate_nominal_joint_angle(
-        right_upper_arm, right_forearm
-    )
-
-    # Convert the two elbow flexion angles from radians → degrees
-    return np.rad2deg(
-        np.array([left_elbow_flex_angle, right_elbow_flex_angle])
-    )
-
-
+    return np.rad2deg(np.array([left_angle, right_angle]))

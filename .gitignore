@@ -11,3 +11,7 @@ media/
 
 # Virtual environments
 .venv
+
+# video files
+*.mp4
+*.gif
