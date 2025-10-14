@@ -6,6 +6,14 @@ import mediapipe as mp
 import numpy as np
 import cv2
 
+
+def get_keypoint_name_from_index(index):
+    """Get the name of a keypoint given its index."""
+    for name, idx in mp_pose.PoseLandmark.__members__.items():
+        if idx.value == index:
+            return name
+    raise KeyError(f"Index {index} not found in PoseLandmark.")
+
 def get_landmarker_results_from_video(video_path, options, start_time_ms=None, end_time_ms=None) -> list:
 
     """Process a video file to extract pose landmarks using Mediapipe Pose Landmarker.
@@ -86,37 +94,37 @@ def get_landmarker_results_from_video(video_path, options, start_time_ms=None, e
 def draw_landmarks_on_image(rgb_image, detection_result):
     """ Draws the pose markers on a given rgb image """
     # Extract list of detected pose landmarks from Mediapipe results
-    pose_landmarks_list = detection_result.pose_landmarks
+    pose_world_landmarks_list = detection_result.pose_world_landmarks
 
     # Make a copy of the input image so the original isn’t modified
     annotated_image = np.copy(rgb_image)
 
     # Loop through each set of pose landmarks (there can be more than one person)
-    for pose_landmarks in pose_landmarks_list:
+    for pose_world_landmarks in pose_world_landmarks_list:
         # Convert the Mediapipe landmarks into a NormalizedLandmarkList proto
         # This is required by the Mediapipe drawing utilities
-        pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        pose_landmarks_proto.landmark.extend(
+        pose_world_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        pose_world_landmarks_proto.landmark.extend(
             [
                 landmark_pb2.NormalizedLandmark(
                     x=landmark.x,  # x-coordinate (normalized [0,1])
                     y=landmark.y,  # y-coordinate (normalized [0,1])
                     z=landmark.z   # z-coordinate (normalized, depth)
                 )
-                for idx, landmark in enumerate(pose_landmarks)
+                for idx, landmark in enumerate(pose_world_landmarks)
             ]
         )
 
         # Draw the landmarks and the connections between them
         # - annotated_image: the image to draw on
-        # - pose_landmarks_proto: landmark points
+        # - pose_world_landmarks_proto: landmark points
         # - POSE_CONNECTIONS: predefined skeleton connections
-        # - get_default_pose_landmarks_style(): default landmark drawing style
+        # - get_default_pose_world_landmarks_style(): default landmark drawing style
         solutions.drawing_utils.draw_landmarks(
             annotated_image,
-            pose_landmarks_proto,
+            pose_world_landmarks_proto,
             solutions.pose.POSE_CONNECTIONS,
-            solutions.drawing_styles.get_default_pose_landmarks_style(),
+            solutions.drawing_styles.get_default_pose_world_landmarks_style(),
         )
 
     # Return the annotated image with pose landmarks drawn
@@ -163,6 +171,32 @@ def annotate_video(video_path, pose_landmarker_results):
         out.write(side_by_side_bgr)
     out.release()
 
-def addForceAnnotations():
-    pass
 
+def drawFBD(frame_idx, pose_landmarkers) :
+    """ draws a free body diagram on a given frame """
+
+    # add center of mass
+    shoulder_mid = (
+        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x +
+         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x) / 2,
+        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y +
+         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y) / 2
+    )
+
+    # Add hip center
+    hip_mid = (
+        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_HIP.value].x +
+         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_HIP.value].x) / 2,
+        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_HIP.value].y +
+         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_HIP.value].y) / 2
+    )
+
+    # draw a point at the center of mass
+    cv2.circle(frame_idx, (int(shoulder_mid[0] * frame_idx.shape[1]), int(shoulder_mid[1] * frame_idx.shape[0])), 5, (0, 255, 0), -1)
+    cv2.circle(frame_idx, (int(hip_mid[0] * frame_idx.shape[1]), int(hip_mid[1] * frame_idx.shape[0])), 5, (0, 0, 255), -1)
+
+    # # Weight distribution analysis
+    # hip_center = [(left_hip[0] + right_hip[0])/2, (left_hip[1] + right_hip[1])/2]
+    # shoulder_center = [(left_shoulder[0] + right_shoulder[0])/2, (left_shoulder[1] + right_shoulder[1])/2]
+    # balance_offset = abs(hip_center[0] - shoulder_center[0])
+    # analysis['weight_distribution'] = 1.0 - min(balance_offset * 10, 1.0)
