@@ -1,8 +1,8 @@
 from mediapipe.python.solutions import pose as mp_pose
 
 import numpy as np
+import cv2
 
-#
 def get_3d_pose_human_frame_for_keypoint(pose_world_landmarkers, 
                                          keypoint: mp_pose.PoseLandmark) -> np.ndarray:
     """Get the 3D coordinates of one of the 33 keypoints from pose world landmarks.
@@ -224,3 +224,6 @@ def calculate_left_right_elbow_flexion(pose_landmarker_result) -> np.ndarray:
     right_angle = calculate_nominal_joint_angle(right_upper_arm, right_forearm)
 
     return np.rad2deg(np.array([left_angle, right_angle]))
+
+
+# --------------------- Free Body Diagram ---------------------------------
