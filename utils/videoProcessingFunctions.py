@@ -92,42 +92,26 @@ def get_landmarker_results_from_video(video_path, options, start_time_ms=None, e
     return pose_landmarker_results
 
 def draw_landmarks_on_image(rgb_image, detection_result):
-    """ Draws the pose markers on a given rgb image """
-    # Extract list of detected pose landmarks from Mediapipe results
-    pose_world_landmarks_list = detection_result.pose_world_landmarks
-
-    # Make a copy of the input image so the original isn’t modified
+    pose_landmarks_list = detection_result.pose_landmarks
     annotated_image = np.copy(rgb_image)
 
-    # Loop through each set of pose landmarks (there can be more than one person)
-    for pose_world_landmarks in pose_world_landmarks_list:
-        # Convert the Mediapipe landmarks into a NormalizedLandmarkList proto
-        # This is required by the Mediapipe drawing utilities
-        pose_world_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        pose_world_landmarks_proto.landmark.extend(
+    for pose_landmarks in pose_landmarks_list:
+        # Draw the pose landmarks.
+        pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        pose_landmarks_proto.landmark.extend(
             [
                 landmark_pb2.NormalizedLandmark(
-                    x=landmark.x,  # x-coordinate (normalized [0,1])
-                    y=landmark.y,  # y-coordinate (normalized [0,1])
-                    z=landmark.z   # z-coordinate (normalized, depth)
+                    x=landmark.x, y=landmark.y, z=landmark.z
                 )
-                for idx, landmark in enumerate(pose_world_landmarks)
+                for idx, landmark in enumerate(pose_landmarks)
             ]
         )
-
-        # Draw the landmarks and the connections between them
-        # - annotated_image: the image to draw on
-        # - pose_world_landmarks_proto: landmark points
-        # - POSE_CONNECTIONS: predefined skeleton connections
-        # - get_default_pose_world_landmarks_style(): default landmark drawing style
         solutions.drawing_utils.draw_landmarks(
             annotated_image,
-            pose_world_landmarks_proto,
+            pose_landmarks_proto,
             solutions.pose.POSE_CONNECTIONS,
-            solutions.drawing_styles.get_default_pose_world_landmarks_style(),
+            solutions.drawing_styles.get_default_pose_landmarks_style(),
         )
-
-    # Return the annotated image with pose landmarks drawn
     return annotated_image
 
 def annotate_video(video_path, pose_landmarker_results):
@@ -172,31 +156,97 @@ def annotate_video(video_path, pose_landmarker_results):
     out.release()
 
 
-def drawFBD(frame_idx, pose_landmarkers) :
+def drawFBD(pose_landmarkers, frame_idx, original_frame_bgr) :
     """ draws a free body diagram on a given frame """
 
-    # add center of mass
-    shoulder_mid = (
-        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x +
-         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x) / 2,
-        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y +
-         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y) / 2
+    # Create a copy of the original frame to draw on
+    original_frame_rgb = cv2.cvtColor(original_frame_bgr, cv2.COLOR_BGR2RGB)
+    fbd_frame = original_frame_rgb.copy()
+    img_height, img_width, _ = fbd_frame.shape
+
+    # Extract 3D pose landmarks for this frame 
+    pose_landmarkers_4_frame = pose_landmarkers[frame_idx]["landmarker_results"]
+    
+    left_shoulder_x, left_shoulder_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_SHOULDER].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_SHOULDER].y * img_height),
     )
 
-    # Add hip center
-    hip_mid = (
-        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_HIP.value].x +
-         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_HIP.value].x) / 2,
-        (pose_landmarkers[mp_pose.PoseLandmark.LEFT_HIP.value].y +
-         pose_landmarkers[mp_pose.PoseLandmark.RIGHT_HIP.value].y) / 2
+    right_shoulder_x, right_shoulder_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_SHOULDER].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_SHOULDER].y * img_height),
     )
 
-    # draw a point at the center of mass
-    cv2.circle(frame_idx, (int(shoulder_mid[0] * frame_idx.shape[1]), int(shoulder_mid[1] * frame_idx.shape[0])), 5, (0, 255, 0), -1)
-    cv2.circle(frame_idx, (int(hip_mid[0] * frame_idx.shape[1]), int(hip_mid[1] * frame_idx.shape[0])), 5, (0, 0, 255), -1)
+    left_hip_x, left_hip_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_HIP].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_HIP].y * img_height),
+    )
 
-    # # Weight distribution analysis
-    # hip_center = [(left_hip[0] + right_hip[0])/2, (left_hip[1] + right_hip[1])/2]
-    # shoulder_center = [(left_shoulder[0] + right_shoulder[0])/2, (left_shoulder[1] + right_shoulder[1])/2]
-    # balance_offset = abs(hip_center[0] - shoulder_center[0])
-    # analysis['weight_distribution'] = 1.0 - min(balance_offset * 10, 1.0)
+    right_hip_x, right_hip_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_HIP].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_HIP].y * img_height),
+    )
+
+    # # Draw pose landmarks on the frame for reference
+    # fbd_frame = draw_landmarks_on_image( fbd_frame, pose_landmarkers_4_frame)
+
+    # # Draw a line between the left and right shoulders
+    # cv2.line(fbd_frame, (left_shoulder_x, left_shoulder_y), (right_shoulder_x, right_shoulder_y), (255, 0, 0), 2)
+    
+    # # Draw a line between the left and right hips
+    # cv2.line(fbd_frame, (left_hip_x, left_hip_y), (right_hip_x, right_hip_y), (255, 0, 0), 2)
+
+    # # Draw a line between the left shoulder and left hip
+    # cv2.line(fbd_frame, (left_shoulder_x, left_shoulder_y), (left_hip_x, left_hip_y), (255, 0, 0), 2)
+
+    # # Draw a line between the right shoulder and right hip
+    # cv2.line(fbd_frame, (right_shoulder_x, right_shoulder_y), (right_hip_x, right_hip_y), (255, 0, 0), 2)
+
+    # determine the mid-hip point
+    mid_hip_x = int((left_hip_x + right_hip_x) / 2)
+    mid_hip_y = int((left_hip_y + right_hip_y) / 2)
+
+    # determine the mid-shoulder point
+    mid_shoulder_x = int((left_shoulder_x + right_shoulder_x) / 2)
+    mid_shoulder_y = int((left_shoulder_y + right_shoulder_y) / 2)
+        
+    # draw COM as a red circle between mid-shoulder and mid-hip
+    com_x = int((mid_shoulder_x + mid_hip_x) / 2)
+    com_y = int((mid_shoulder_y + mid_hip_y) / 2)
+    cv2.circle(fbd_frame, (com_x, com_y), 7, (255, 0, 0), -1)
+
+    # draw a force arrow from COM downwards
+    arrow_start = (com_x, com_y)
+    arrow_end = (com_x, com_y + int(9.81*img_height // 100))  # length proportional to 9.81 m/s²
+    cv2.arrowedLine(fbd_frame, arrow_start, arrow_end, (255, 0, 0), 2, tipLength=0.3)
+
+
+    # draw ground reaction force arrow at the left foot based on which foot is down
+    left_foot_y = int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_FOOT_INDEX].y * img_height)
+    right_foot_y = int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_FOOT_INDEX].y * img_height)
+    
+    
+    # left foot is down if right hip is rotated more than left hip or if left foot is lower than right foot
+    left_foot_x, left_foot_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_FOOT_INDEX].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.LEFT_FOOT_INDEX].y * img_height),
+    )
+
+    right_foot_x, right_foot_y = (
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_FOOT_INDEX].x * img_width),
+        int(pose_landmarkers_4_frame.pose_landmarks[0][mp_pose.PoseLandmark.RIGHT_FOOT_INDEX].y * img_height),
+    )
+
+    if left_foot_y > right_foot_y or right_hip_x < left_hip_x :
+        # left foot is down, draw GRF arrow at left foot
+        grf_start = (left_foot_x, left_foot_y)
+        grf_end = (left_foot_x, left_foot_y - int(9.81*img_height // 100))  # length proportional to 9.81 m/s²
+        cv2.arrowedLine(fbd_frame, grf_start, grf_end, (0, 255, 0), 2, tipLength=0.3)
+
+    else :
+        # right foot is down, draw GRF arrow at right foot
+        grf_start = (right_foot_x, right_foot_y)
+        grf_end = (right_foot_x, right_foot_y - int(9.81*img_height // 100))  # length proportional to 9.81 m/s²
+        cv2.arrowedLine(fbd_frame, grf_start, grf_end, (0, 255, 0), 2, tipLength=0.3)
+
+    return fbd_frame
