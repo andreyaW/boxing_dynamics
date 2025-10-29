@@ -77,5 +77,7 @@ class JointAngularKinematicVariables:
         JointAnatomicalAngularKinematicVariables
     ] = None
 
-
-
+@dataclass
+class BoxingPunchMetrics:
+    right_wrist_punching_velocity_magnitude: np.ndarray
+    left_wrist_punching_velocity_magnitude: np.ndarray
