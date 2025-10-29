@@ -9,6 +9,7 @@ from pipeline.pipeline import (
     VideoConfiguration,
     VideoData,
     LandmarkingStageInput,
+    BoxingPunchMetrics,
 )
 from pipeline.video_loader import VideoLoader
 from pipeline.landmarking import ExtractHumanPoseLandmarks
@@ -17,11 +18,19 @@ from pipeline.kinematics_extractor import (
     ExtractJointAngularKinematics,
 )
 
+from pipeline.boxing_metrics import CalculateBoxingMetrics
+
+from utils.joints import JOINTS, Joint
+
 import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import (
     PoseLandmarkerOptions,
 )
 from mediapipe.tasks.python import BaseOptions
+from mediapipe.python.solutions.pose import PoseLandmark
+
+from matplotlib import pyplot as plt
+import numpy as np
 
 
 @click.command()
@@ -41,19 +50,12 @@ def main(debug_logging: bool):
 
     logging.info("Starting BoxingDynamics pipeline")
 
-    pipeline = [
-        ExtractWorldLandmarkLinearKinematics(),
-        ExtractJointAngularKinematics(),
-    ]
-
     video_config = VideoConfiguration(
         name="Max's Cross Punch",
         path=Path("media/realspeed/cross.MP4"),
     )
-    logging.info("Starting Stage 1: VideoLoader")
+
     video_data = VideoLoader().execute(video_config)
-    logging.info("Finished Stage 1: VideoLoader")
-    logging.info("Starting Stage 2: ExtractHumanPoseLandmarks")
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
             video_data,
@@ -66,25 +68,34 @@ def main(debug_logging: bool):
             ),
         )
     )
-    logging.info("Finished Stage 2: ExtractHumanPoseLandmarks")
-    logging.info(
-        "Starting Stage 3: ExtractWorldLandmarkLinearKinematics"
-    )
+
     linear_kinematics = (
         ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
     )
-    logging.info(
-        "Finished Stage 3: ExtractWorldLandmarkLinearKinematics"
-    )
-    logging.info("Starting Stage 4: ExtractJointAngularKinematics")
 
     joint_angle_kinematics = ExtractJointAngularKinematics().execute(
         linear_kinematics
     )
-    logging.info("Finished Stage 4: ExtractJointAngularKinematics")
-    logging.info(
-        f"{joint_angle_kinematics.joint_3d_angular_kinematics.position.shape=}"
+    boxing_metrics = CalculateBoxingMetrics().execute(
+        linear_kinematics
     )
+    fig, axs = plt.subplots(2, sharex=True)
+    # fmt: off
+
+
+    axs[0].plot(boxing_metrics.right_wrist_punching_velocity_magnitude, label='right wrist magnitude', color='r')
+    axs[0].plot(boxing_metrics.left_wrist_punching_velocity_magnitude, label='left wrist magnitude', color='b')
+    axs[0].set(xlabel="Timestep", ylabel="Velocity", title="Punch Metrics")
+    axs[0].grid(True)
+    axs[0].legend()
+    
+    axs[1].plot(joint_angle_kinematics.joint_3d_angular_kinematics.position[:, JOINTS[PoseLandmark.RIGHT_KNEE].index], color='r', label='right knee angle')
+    axs[1].plot(joint_angle_kinematics.joint_3d_angular_kinematics.position[:, JOINTS[PoseLandmark.LEFT_KNEE].index], color='b', label='left knee angle')
+    axs[1].set(xlabel="Timestep", ylabel="Angle", title="Leg load metrics")
+    axs[1].grid(True)
+    axs[1].legend()
+    fig.tight_layout()
+    plt.show()
 
     logging.info("Finished BoxingDynamics pipeline")
 

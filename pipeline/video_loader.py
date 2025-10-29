@@ -11,6 +11,7 @@ from pipeline.pipeline import (
 
 class VideoLoader(StageBase[VideoConfiguration, VideoData]):
     def execute(self, input: VideoConfiguration) -> VideoData:
+        self.logger.info("Starting VideoLoader stage")
         cap = cv2.VideoCapture(str(input.path))
         fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -44,5 +45,6 @@ class VideoLoader(StageBase[VideoConfiguration, VideoData]):
         self.logger.info(
             f"Loaded {len(frames)} frames from {str(input.path)}"
         )
+        self.logger.info("Finished VideoLoader stage")
 
         return VideoData(frames=frames, fps=fps)

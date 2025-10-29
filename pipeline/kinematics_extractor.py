@@ -26,10 +26,15 @@ class ExtractWorldLandmarkLinearKinematics(
     def execute(
         self, input: List[PoseLandmarkerResult]
     ) -> WorldLandmarkLinearKinematicVariables:
+        self.logger.info("Starting ExtractWorldLandmarkLinearKinematics stage")
         positions = mediapipe_human_frame_landmark_to_position_array(
             input
         )
-        return WorldLandmarkLinearKinematicVariables(positions)
+        velocities = np.gradient(positions, axis=0)
+        self.logger.info("Starting ExtractWorldLandmarkLinearKinematics stage")
+        return WorldLandmarkLinearKinematicVariables(
+            positions, velocity=velocities
+        )
 
 
 class ExtractJointAngularKinematics(
@@ -48,27 +53,39 @@ class ExtractJointAngularKinematics(
             PoseLandmark.LEFT_KNEE,
             PoseLandmark.RIGHT_KNEE,
         ]
+        self.logger.info(f"Desired joints: {desired_joints}")
         joint_3d_angles = np.zeros(
             (input.position.shape[0], len(desired_joints))
         )
 
         for joint in desired_joints:
-            proximal_limb_vector = input.position[:, JOINTS[joint].parent_landmark] - input.position[:, JOINTS[joint].joint_landmark]
-            distal_limb_vector = input.position[:, JOINTS[joint].joint_landmark] - input.position[:, JOINTS[joint].child_landmark]
-            angle = calculate_nominal_joint_angles_from_time_series(
-                proximal_limb_vector, distal_limb_vector
+            proximal_limb_vector = (
+                input.position[:, JOINTS[joint].parent_landmark]
+                - input.position[:, JOINTS[joint].joint_landmark]
             )
-            joint_3d_angles[:, JOINTS[joint].index] = angle
-
+            distal_limb_vector = (
+                input.position[:, JOINTS[joint].joint_landmark]
+                - input.position[:, JOINTS[joint].child_landmark]
+            )
+            joint_3d_angles[:, JOINTS[joint].index] = (
+                calculate_nominal_joint_angles_from_time_series(
+                    proximal_limb_vector, distal_limb_vector
+                )
+            )
         return JointAngularKinematicVariables(
             AngularKinematicVariables(joint_3d_angles)
         )
 
 
-def calculate_nominal_joint_angles_from_time_series(proximal_vec_over_time, distal_vec_over_time):
-    dot_product = np.einsum("ij,ij->i", proximal_vec_over_time, distal_vec_over_time)
+def calculate_nominal_joint_angles_from_time_series(
+    proximal_vec_over_time, distal_vec_over_time
+):
+    dot_product = np.einsum(
+        "ij,ij->i", proximal_vec_over_time, distal_vec_over_time
+    )
     similarity = dot_product / (
-        np.linalg.norm(proximal_vec_over_time, axis=1) * np.linalg.norm(distal_vec_over_time, axis=1)
+        np.linalg.norm(proximal_vec_over_time, axis=1)
+        * np.linalg.norm(distal_vec_over_time, axis=1)
     )
     return np.arccos(similarity)
 
