@@ -78,19 +78,4 @@ class JointAngularKinematicVariables:
     ] = None
 
 
-class BoxingDynamicsPipeline:
-    def __init__(self, stages: List[StageBase]):
-        self.stages = stages
-        self.logger = logging.getLogger(self.__class__.__name__)
 
-    def run(self, input: VideoConfiguration):
-        data = input
-        for stage in self.stages:
-            self.logger.info(
-                f"Pipeline starting executing: {stage.__class__.__name__}"
-            )
-            data = stage.execute(data)
-            self.logger.info(
-                f"Pipeline finished executing: {stage.__class__.__name__}"
-            )
-        return data
