@@ -32,3 +32,12 @@ Boxing Dynamics
 30 - right heel
 31 - left foot index
 32 - right foot index
+
+# Usage
+```
+python3 main.py media/realspeed/jab.MP4
+```
+To run the pipeline and launch a debugger on an error:
+```
+python3 -m pdb -c continue main.py media/realspeed/jab.MP4
+```
