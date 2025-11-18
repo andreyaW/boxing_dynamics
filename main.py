@@ -7,6 +7,7 @@ from pathlib import Path
 from pipeline.pipeline import (
     VideoConfiguration,
     LandmarkingStageInput,
+    AddArrowsStageInput,
 )
 from pipeline.video_loader import VideoLoader
 from pipeline.landmarking import ExtractHumanPoseLandmarks
@@ -16,12 +17,13 @@ from pipeline.kinematics_extractor import (
 )
 from pipeline.boxing_metrics import CalculateBoxingMetrics
 from pipeline.video_ouput import FuseVideoAndBoxingMetrics
+from pipeline.add_arrows import AddArrowsToLegs
 
 import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
 from mediapipe.tasks.python import BaseOptions
 
-
+# adding command line call options
 @click.command()
 @click.argument(
     "video_path",
@@ -41,6 +43,8 @@ from mediapipe.tasks.python import BaseOptions
 )
 @click.option("--lite", "model_fidelity", flag_value="lite", default='lite', help="Use lite MediaPipe model (default).")
 @click.option("--heavy", "model_fidelity", flag_value="heavy", help="heavy model.")
+
+# main function : Running the pipeline
 def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidelity):
     """Run the BoxingDynamics pipeline on a specified video path."""
     log_level = logging.DEBUG if debug_logging else logging.INFO
@@ -52,15 +56,15 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
     logging.info("Starting BoxingDynamics pipeline")
     logging.info(f"Video Path: {video_path}")
 
-    # Build video configuration dynamically
+    # Stage 1️⃣: Load video
     video_config = VideoConfiguration(
         name=video_path.stem,
         path=video_path,
         scale_factor=scale_factor,
     )
-
-    # --- Run pipeline stages ---
     video_data = VideoLoader().execute(video_config)
+    
+    # Stage 2️⃣:  Select model (lite/heavy) and extract landmarks
     model_asset_path = None
     match model_fidelity:
         case 'heavy':
@@ -68,7 +72,6 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
         case _:
             model_asset_path = "assets/pose_landmarker_lite.task"
     
-
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
             video_data,
@@ -82,19 +85,27 @@ def main(video_path: Path, debug_logging: bool, scale_factor: float, model_fidel
         )
     )
 
-    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-    joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
-    boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
-
+    # # Stage3️⃣: Compute linear kinematics 
+    # linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
     
+    # # Stage 4️⃣: Compute joint angular kinematics
+    # joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
+    
+    # # Stage 5️⃣: Calculate Relevant Boxing Metrics
+    # boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
 
-    # Run fusion stage with explicit output path
-    output_path = FuseVideoAndBoxingMetrics().execute(
-        (video_data, boxing_metrics),
-    )
-    logging.info(f"Output video will be saved to: {output_path}")
+    # Stage 6️⃣: Add (growning/shrinking) force arrows to the orginal video
+    video_data_w_arrows, output_path = AddArrowsToLegs().execute(AddArrowsStageInput(
+                                                                                    video_data, 
+                                                                                    landmarkers, 
+                                                                                    save_video=True))
+
+    # # Stage 7️⃣: Fuse the input video and boxing metrics into one output video
+    # output_path = FuseVideoAndBoxingMetrics().execute((video_with_arrows, boxing_metrics))
+    # logging.info(f"Output video will be saved to: {output_path}")
+    logging.info(f"Saving video with arrows to: {output_path}")
+
     logging.info("Finished BoxingDynamics pipeline")
-
 
 if __name__ == "__main__":
     main()
