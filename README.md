@@ -39,30 +39,62 @@ Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person bo
 
 The output from the pipeline will be the input video with measured hip and shoulder rotations, as well as the hand velocity of both the left and right hands. These measurements directly correlate to an overall punch force metric. 
 
-
-
-# Usage
-In order to run the pipeline run the following in terminal : 
-
+# Usage (PC)
+In order to use the pipeline first clone the repository using : 
 ```
-python3 main.py media/realspeed/jab.MP4
+    git clone git@github.com:dhruvgargj5/boxing_dynamics.git
+    cd boxing_dynamics
 ```
 
+Next, create a virtual environment and install the requirements using : 
+```
+    python -m venv venv
+    venv\Scripts\activate
+    pip install -r requirements.txt
+```
+
+Finally, in order to run the pipeline use the following in terminal: 
+
+```
+    python main.py <path2Video/link2Video>
+```
 
 To run the pipeline and launch a debugger on an error:
 ```
-python3 -m pdb -c continue main.py media/realspeed/jab.MP4
+python -m pdb -c continue main.py  <path2Video/link2Video>
+```
+
+# Usage (Linux/MAC)
+In order to use the pipeline first clone the repository using : 
+```
+    git clone git@github.com:dhruvgargj5/boxing_dynamics.git
+    cd boxing_dynamics
+```
+
+Next, create a virtual environment and install the requirements using : 
+```
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+```
+
+Finally, in order to run the pipeline use the following in terminal: 
+```
+    python3 main.py <path2Video/link2Video>
+```
+
+To run the pipeline and launch a debugger on an error:
+```
+python3 -m pdb -c continue main.py  <path2Video/link2Video>
 ```
 
 
 # Pipeline
 The pipeline consist of 8 stages total. 
-1. Video Loader
-2. Landmark Extraction 
-3. Kinematics Computations
-4. Angular Kinematics Computations
-5. Compute Boxing Metrics
-6. Adding Force Arrows
-7. Fusion of Boxing Metrics to Video
-8. Output Video
+1. Video Loader - loads the video from a path and stores the video settings (name, fps, and scale factor)
+2. Landmark Extraction - uses the mediapipe pose detection software to track the 33 keypoints throughout the video and store their positions and visibilities. 
+3. Kinematics Computations - Computes the kinematics of relevant keypoints (left and right wrist) as well as the Joint Angular Kinematics of joints of interest using the world coordinates generated from landmark extraction 
+4. Compute Boxing Metrics - determines the wrist velocity and shoulder and hip rotations from the computed kinematics in the previous stage
+5. Adding Force Arrows - (optional stage) Adds FBD to the video which shows where the force in the punch is being generated 
+6. Fusion of Boxing Metrics to Video- outputs the input video with additional graphs to the right of it which track the boxing metrics and the estimated kniematics from pose detection
 
