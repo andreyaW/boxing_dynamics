@@ -1,6 +1,9 @@
-Boxing Dynamics
-0 - nose
-1 - left eye (inner)
+# Boxing Dynamics
+
+Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches. The pipieline will automatically analyze the video using Google's Pose Landmark Detection software mediapipe and detect the motion of 33 keypoints trhought the video. The keypoints are defined as follows: 
+
+    * 0 - nose
+    * 1 - left eye (inner)
 2 - left eye
 3 - left eye (outer)
 4 - right eye (inner)
