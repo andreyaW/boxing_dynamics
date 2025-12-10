@@ -5,6 +5,7 @@ import os
 import gdown
 import logging
 import mediapipe as mp
+import zipfile
 
 from pathlib import Path
 
