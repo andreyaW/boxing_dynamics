@@ -51,17 +51,37 @@ def process_video(
     )
 
 
-def get_model_path(model_fidelity: str):
+def get_model_path(model_fidelity: str) -> str:
+    """
+    Ensures the MediaPipe pose_landmarker task file is downloaded and unzipped.
+    Returns the path to the .task file for MediaPipe to use.
+    """
     MODEL_URLS = {
-    "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
-    "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
+        "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
+        "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
     }
+    
     os.makedirs("assets", exist_ok=True)
-    local_path = f"assets/pose_landmarker_{model_fidelity}.task"
-    if not os.path.exists(local_path):
+    task_path = f"assets/pose_landmarker_{model_fidelity}.task"
+    unzip_dir = f"assets/pose_landmarker_{model_fidelity}_unzipped"
+
+    # Download if missing
+    if not os.path.exists(task_path):
         url = MODEL_URLS[model_fidelity]
-        gdown.download(url, local_path, quiet=False)
-    return local_path
+        gdown.download(url, task_path, quiet=False)
+
+    # Verify and unzip
+    if not os.path.exists(unzip_dir):
+        os.makedirs(unzip_dir, exist_ok=True)
+        try:
+            with zipfile.ZipFile(task_path, 'r') as zip_ref:
+                zip_ref.extractall(unzip_dir)
+        except zipfile.BadZipFile:
+            raise RuntimeError(f"The downloaded task file {task_path} is corrupted.")
+
+    # MediaPipe still expects the .task file path, not the unzipped folder
+    # But we can keep the unzipped contents for debugging or verification if needed
+    return task_path
 
 # ---------------------------------------------------------------------
 # INTERNAL PIPELINE FUNCTION (shared by process_video and CLI)
