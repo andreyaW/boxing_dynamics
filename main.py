@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 import click
+import os
+import gdown
 import logging
+import mediapipe as mp
+
 from pathlib import Path
 
 from pipeline.pipeline import (
@@ -19,7 +23,6 @@ from pipeline.boxing_metrics import CalculateBoxingMetrics
 from pipeline.video_ouput import FuseVideoAndBoxingMetrics
 from pipeline.add_arrows import AddArrowsToLegs
 
-import mediapipe as mp
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmarkerOptions
 from mediapipe.tasks.python import BaseOptions
 
@@ -47,6 +50,18 @@ def process_video(
         debug_logging=debug_logging,
     )
 
+
+def get_model_path(model_fidelity: str):
+    MODEL_URLS = {
+    "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
+    "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
+    }
+    os.makedirs("assets", exist_ok=True)
+    local_path = f"assets/pose_landmarker_{model_fidelity}.task"
+    if not os.path.exists(local_path):
+        url = MODEL_URLS[model_fidelity]
+        gdown.download(url, local_path, quiet=False)
+    return local_path
 
 # ---------------------------------------------------------------------
 # INTERNAL PIPELINE FUNCTION (shared by process_video and CLI)
@@ -77,11 +92,7 @@ def _run_pipeline(
     video_data = VideoLoader().execute(video_config)
 
     # Stage 2: Select model and extract landmarks
-    match model_fidelity:
-        case "heavy":
-            model_asset_path = "assets/pose_landmarker_heavy.task"
-        case _:
-            model_asset_path = "assets/pose_landmarker_lite.task"
+    model_asset_path = get_model_path(model_fidelity)
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
@@ -121,7 +132,7 @@ def _run_pipeline(
 
 
 # ---------------------------------------------------------------------
-# ORIGINAL CLICK-BASED CLI ENTRY POINT
+# CLICK-BASED CLI ENTRIES
 # ---------------------------------------------------------------------
 @click.command()
 @click.argument("video_path", type=str)
