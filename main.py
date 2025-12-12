@@ -90,12 +90,11 @@ def _run_pipeline(
     angular_kinematics_joints,
     linear_kinematics_joints,
 ) -> str:
-    """Run the BoxingDynamics pipeline on a specified video path."""
+    """Run the BoxingDynamics pipeline on a specified video path and return main output file path."""
+
+    # --- Setup logging ---
     log_level = logging.DEBUG if debug_logging else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="[%(levelname)s] %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=log_level, format="[%(levelname)s] %(name)s: %(message)s")
 
     logging.info("Starting BoxingDynamics pipeline")
     logging.info(f"Video Path: {video_path}")
@@ -103,8 +102,7 @@ def _run_pipeline(
     output_dir.mkdir(parents=True, exist_ok=True)
     logging.info(f"Made output directory {output_dir}")
 
-    # Build video configuration dynamically
-    # Stage 1: Load video
+    # --- Stage 1: Load video ---
     video_path = Path(video_path)
     video_config = VideoConfiguration(
         name=video_path.stem,
@@ -113,7 +111,7 @@ def _run_pipeline(
     )
     video_data = VideoLoader().execute(video_config)
 
-    # Stage 2: Select model and extract landmarks
+    # --- Stage 2: Select model and extract landmarks ---
     try:
         match model_fidelity:
             case "heavy":
@@ -121,10 +119,8 @@ def _run_pipeline(
             case _:
                 model_asset_path = Path("assets/pose_landmarker_lite.task")
 
-        # Fallback if file doesn’t exist
         if not model_asset_path.exists():
             raise FileNotFoundError
-        
     except (NameError, FileNotFoundError):
         model_asset_path = get_model_path(model_fidelity)
 
@@ -132,73 +128,60 @@ def _run_pipeline(
         LandmarkingStageInput(
             video_data,
             PoseLandmarkerOptions(
-                base_options=BaseOptions(
-                    model_asset_path=model_asset_path
-                ),
+                base_options=BaseOptions(model_asset_path=model_asset_path),
                 running_mode=mp.tasks.vision.RunningMode.VIDEO,
                 output_segmentation_masks=False,
             ),
         )
     )
 
-    linear_kinematics = (
-        ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
-    )
-    boxing_metrics = CalculateBoxingMetrics().execute(
-        linear_kinematics
-    )
-
+    # --- Stage 3: Linear & Angular Kinematics ---
+    linear_kinematics = ExtractWorldLandmarkLinearKinematics().execute(landmarkers)
+    boxing_metrics = CalculateBoxingMetrics().execute(linear_kinematics)
     video_fuser = FuseVideoAndBoxingMetrics()
+
+    output_files = []
+
+    # Linear kinematics videos
     if linear_kinematics_joints:
         for joint_name in linear_kinematics_joints:
             joint = PoseLandmark[joint_name.upper()]
-            logging.info(
-                f"Outputting linear kinematics for {joint.name}"
-            )
+            logging.info(f"Outputting linear kinematics for {joint.name}")
             linear_anim = video_fuser.PlotJointLinearKinematics((video_data, linear_kinematics, landmarkers), joint)
-            linear_out_path = (
-                output_dir / f"{joint.name}_linear_kinematics.MP4"
-            )
+            linear_out_path = output_dir / f"{joint.name}_linear_kinematics.MP4"
             linear_anim.save(linear_out_path, writer='ffmpeg', fps=video_data.fps)
-            logging.info(
-                f"Linear kinematics video saved to: {linear_out_path}"
-            )            
+            logging.info(f"Linear kinematics video saved to: {linear_out_path}")
+            output_files.append(linear_out_path)
+
+    # Angular kinematics videos
     if angular_kinematics_joints:
+        joint_angle_kinematics = ExtractJointAngularKinematics().execute(linear_kinematics)
         for joint_name in angular_kinematics_joints:
             joint = PoseLandmark[joint_name.upper()]
-            logging.info(
-                f"Outputting angular kinematics for {joint.name}"
-            )
-            joint_angle_kinematics = (
-                ExtractJointAngularKinematics().execute(
-                    linear_kinematics
-                )
-            )
+            logging.info(f"Outputting angular kinematics for {joint.name}")
             kinematics_anim = video_fuser.PlotJointAngularKinematics(
-                (video_data, joint_angle_kinematics, landmarkers),
-                joint,
+                (video_data, joint_angle_kinematics, landmarkers), joint
             )
-            kinematics_out_path = (
-                output_dir / f"{joint.name}_angular_kinematics.MP4"
-            )
-            kinematics_anim.save(
-                kinematics_out_path,
-                writer="ffmpeg",
-                fps=video_data.fps,
-            )
-            logging.info(
-                f"Angular kinematics video saved to: {kinematics_out_path}"
-            )
+            kinematics_out_path = output_dir / f"{joint.name}_angular_kinematics.MP4"
+            kinematics_anim.save(kinematics_out_path, writer="ffmpeg", fps=video_data.fps)
+            logging.info(f"Angular kinematics video saved to: {kinematics_out_path}")
+            output_files.append(kinematics_out_path)
+
+    # Metrics video
     if not no_metrics:
-        animation = video_fuser.execute((video_data, boxing_metrics, landmarkers))
+        metrics_anim = video_fuser.execute((video_data, boxing_metrics, landmarkers))
         metrics_out_path = output_dir / "metrics.MP4"
-        animation.save(
-            metrics_out_path, writer="ffmpeg", fps=video_data.fps
-        )
+        metrics_anim.save(metrics_out_path, writer="ffmpeg", fps=video_data.fps)
         logging.info(f"Metrics video saved to: {metrics_out_path}")
+        output_files.append(metrics_out_path)
+
     logging.info("Finished BoxingDynamics pipeline")
 
-    return str(output_dir)
+    # --- Return single main file for Gradio (metrics if exists, otherwise first video) ---
+    if output_files:
+        return str(output_files[-1])  # metrics video is usually last
+    else:
+        raise RuntimeError("No output video files were generated.")
 
 
 # ---------------------------------------------------------------------
