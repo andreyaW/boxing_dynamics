@@ -128,14 +128,15 @@ def _run_pipeline(
     video_data = VideoLoader().execute(video_config)
 
     # Stage 2: Select model and extract landmarks
-    try:
-        match model_fidelity:
-            case "heavy":
-                model_asset_path = "assets/pose_landmarker_heavy.task"
-            case _:
-                model_asset_path = "assets/pose_landmarker_lite.task"
-    except NameError:
-        model_asset_path = get_model_path(model_fidelity)
+    match model_fidelity:
+        case "heavy":
+            model_asset_path = Path("assets/pose_landmarker_heavy.task")
+        case _:
+            model_asset_path = Path("assets/pose_landmarker_lite.task")
+
+    # If the file doesn’t exist, fallback to get_model_path()
+    if not model_asset_path.exists():
+        model_asset_path = Path(get_model_path(model_fidelity))
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
