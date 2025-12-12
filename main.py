@@ -2,6 +2,10 @@
 
 import click
 import logging
+import os
+import gdown
+import zipfile
+
 from pathlib import Path
 
 from pipeline.pipeline import (
@@ -61,35 +65,37 @@ def process_video(
 # ---------------------------------------------------------------------
 # DOWNLOAD AND UNZIP A MODEL ONLINE (for website implementation)
 # ---------------------------------------------------------------------
-def get_model_path(model_fidelity: str) -> str:
+def get_model_path(model_fidelity: str) -> Path:
     """
     Ensures the MediaPipe pose_landmarker task file is downloaded and unzipped.
-    Returns the path to the .task file for MediaPipe to use.
+    Returns a Path to the .task file for MediaPipe to use.
     """
     MODEL_URLS = {
         "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
         "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
     }
-    
-    os.makedirs("assets", exist_ok=True)
-    task_path = f"assets/pose_landmarker_{model_fidelity}.task"
-    unzip_dir = f"assets/pose_landmarker_{model_fidelity}_unzipped"
+
+    assets_dir = Path("assets")
+    assets_dir.mkdir(exist_ok=True)
+
+    task_path = assets_dir / f"pose_landmarker_{model_fidelity}.task"
+    unzip_dir = assets_dir / f"pose_landmarker_{model_fidelity}_unzipped"
 
     # Download if missing
-    if not os.path.exists(task_path):
+    if not task_path.exists():
         url = MODEL_URLS[model_fidelity]
-        gdown.download(url, task_path, quiet=False)
+        gdown.download(url, str(task_path), quiet=False)
 
     # Verify and unzip
-    if not os.path.exists(unzip_dir):
-        os.makedirs(unzip_dir, exist_ok=True)
+    if not unzip_dir.exists():
+        unzip_dir.mkdir(exist_ok=True)
         try:
             with zipfile.ZipFile(task_path, 'r') as zip_ref:
                 zip_ref.extractall(unzip_dir)
         except zipfile.BadZipFile:
             raise RuntimeError(f"The downloaded task file {task_path} is corrupted.")
-    return task_path
 
+    return task_path
 
 # ---------------------------------------------------------------------
 # INTERNAL PIPELINE FUNCTION (shared by process_video and CLI)
@@ -128,15 +134,19 @@ def _run_pipeline(
     video_data = VideoLoader().execute(video_config)
 
     # Stage 2: Select model and extract landmarks
-    match model_fidelity:
-        case "heavy":
-            model_asset_path = Path("assets/pose_landmarker_heavy.task")
-        case _:
-            model_asset_path = Path("assets/pose_landmarker_lite.task")
+    try:
+        match model_fidelity:
+            case "heavy":
+                model_asset_path = Path("assets/pose_landmarker_heavy.task")
+            case _:
+                model_asset_path = Path("assets/pose_landmarker_lite.task")
 
-    # If the file doesn’t exist, fallback to get_model_path()
-    if not model_asset_path.exists():
-        model_asset_path = Path(get_model_path(model_fidelity))
+        # Fallback if file doesn’t exist
+        if not model_asset_path.exists():
+            raise FileNotFoundError
+        
+    except (NameError, FileNotFoundError):
+        model_asset_path = get_model_path(model_fidelity)
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
