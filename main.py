@@ -32,13 +32,13 @@ from mediapipe.tasks.python import BaseOptions
 # ---------------------------------------------------------------------
 def process_video(
     video_path: Path,
-    output_dir: Path,
-    no_metrics: bool,
-    debug_logging: bool,
-    scale_factor: float,
-    model_fidelity,
-    angular_kinematics_joints,
-    linear_kinematics_joints,
+    output_dir = Path("output"),
+    no_metrics: bool = False,
+    debug_logging: bool = False,
+    scale_factor: float = None,
+    model_fidelity= "lite",
+    angular_kinematics_joints = None,
+    linear_kinematics_joints = None,
 ) -> str:
     """
     Process a video using the BoxingDynamics pipeline and return
@@ -56,6 +56,39 @@ def process_video(
         angular_kinematics_joints,
         linear_kinematics_joints,
     )
+
+
+# ---------------------------------------------------------------------
+# DOWNLOAD AND UNZIP A MODEL ONLINE (for website implementation)
+# ---------------------------------------------------------------------
+def get_model_path(model_fidelity: str) -> str:
+    """
+    Ensures the MediaPipe pose_landmarker task file is downloaded and unzipped.
+    Returns the path to the .task file for MediaPipe to use.
+    """
+    MODEL_URLS = {
+        "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
+        "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
+    }
+    
+    os.makedirs("assets", exist_ok=True)
+    task_path = f"assets/pose_landmarker_{model_fidelity}.task"
+    unzip_dir = f"assets/pose_landmarker_{model_fidelity}_unzipped"
+
+    # Download if missing
+    if not os.path.exists(task_path):
+        url = MODEL_URLS[model_fidelity]
+        gdown.download(url, task_path, quiet=False)
+
+    # Verify and unzip
+    if not os.path.exists(unzip_dir):
+        os.makedirs(unzip_dir, exist_ok=True)
+        try:
+            with zipfile.ZipFile(task_path, 'r') as zip_ref:
+                zip_ref.extractall(unzip_dir)
+        except zipfile.BadZipFile:
+            raise RuntimeError(f"The downloaded task file {task_path} is corrupted.")
+    return task_path
 
 
 # ---------------------------------------------------------------------
@@ -94,11 +127,14 @@ def _run_pipeline(
     video_data = VideoLoader().execute(video_config)
 
     # Stage 2: Select model and extract landmarks
-    match model_fidelity:
-        case "heavy":
-            model_asset_path = "assets/pose_landmarker_heavy.task"
-        case _:
-            model_asset_path = "assets/pose_landmarker_lite.task"
+    try:
+        match model_fidelity:
+            case "heavy":
+                model_asset_path = "assets/pose_landmarker_heavy.task"
+            case _:
+                model_asset_path = "assets/pose_landmarker_lite.task"
+    except NameError:
+        model_asset_path = get_model_path(model_fidelity)
 
     landmarkers = ExtractHumanPoseLandmarks().execute(
         LandmarkingStageInput(
@@ -261,7 +297,7 @@ def main(
         model_fidelity,
         angular_kinematics_joints,
         linear_kinematics_joints,
-    )
+        )
 
 
 if __name__ == "__main__":

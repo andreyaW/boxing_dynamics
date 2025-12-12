@@ -12,14 +12,7 @@ def run_and_return_file(uploaded_file):
     if uploaded_file is None:
         return None, None
 
-    out_path = process_video(uploaded_file,
-                            output_dir = "output",
-                            no_metrics= False,
-                            debug_logging= False,
-                            scale_factor= 1.0,
-                            model_fidelity= "heavy",
-                            angular_kinematics_joints= None,
-                            linear_kinematics_joints= None)
+    out_path = process_video(uploaded_file)
 
     if not os.path.exists(out_path):
         raise FileNotFoundError(f"Expected output not found: {out_path}")
