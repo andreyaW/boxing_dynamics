@@ -25,7 +25,9 @@ with gr.Blocks(title="Boxing Dynamics Video Processor") as demo:
     gr.Markdown(
         """
         ## Boxing Dynamics Video Processor  
-        Upload a video, let the model process it, watch the output directly, and download the result.
+        - Upload a video and let the model process it (this will take about 2-3 minutes). 
+        - Watch the output directly
+        - (Optional) Download the result
         """
     )
 

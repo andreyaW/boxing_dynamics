@@ -1,6 +1,6 @@
 ---
-title: My Video Processor
-emoji: 🎬
+title: Boxing Dynamics Video Processor
+emoji: 🎬🥊
 colorFrom: blue
 colorTo: blue
 sdk: gradio
@@ -9,7 +9,7 @@ pinned: false
 
 # Boxing Dynamics
 
-Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches (jab, corss, hooks or uppercuts). The pipieline will automatically analyze the video using Google's Pose Landmark Detection software [Mediapipe](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/python) to detect the motion of 33 pose keypoints throughout the video. The keypoints are defined as follows: 
+Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches (jab, corss, hooks or uppercuts). The pipieline will automatically analyze the video using Google's Pose Landmark Detection software [Mediapipe](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/python) to detect the motion of 33 pose keypoints throughout the video. The keypoints are defined as shown in the table below. The output from the pipeline will be the input video with measured hip and shoulder rotations, as well as the hand velocity of both the left and right hands. These measurements directly correlate to an overall punch force metric. This project can be acessed online at the following huggingface space: [boxing-dynamics-demo](https://huggingface.co/spaces/adware74/boxing-dynamics-app). Alternatively, one can utilize this pipeline locally by following the usage instructions below.
 
 ### Pose Detection Landmarks
 | Index | Landmark        |
@@ -47,9 +47,6 @@ Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person bo
 | 30    | Right heel       |
 | 31    | Left foot index  |
 | 32    | Right foot index |
-
-
-The output from the pipeline will be the input video with measured hip and shoulder rotations, as well as the hand velocity of both the left and right hands. These measurements directly correlate to an overall punch force metric. This project can be acessed online at the following huggingface space: [boxing-dynamics-demo](https://huggingface.co/spaces/adware74/boxing-dynamics-app). Alternatively, one can utilize this pipeline locally by following the usage instructions below.
 
 # Usage (PC)
 In order to use the pipeline first clone the repository using : 
@@ -118,7 +115,7 @@ The pipeline consist of 6 stages total.
 
 ##
 # Hugging Face Deployment Guide
-This guide explains how to deploy this repository as a Hugging Face Space. Follow the steps below or refer to the linked tutorial video.
+This guide explains how to deploy this repository as a Hugging Face Space. Follow the steps below or refer to the linked [tutorial video](https://youtu.be/8hOzsFETm4I?si=gSgO9OWUtdD0TP7i).
 
 1. Fork the Repository
     - Create your own copy of this GitHub repository by clicking Fork.
