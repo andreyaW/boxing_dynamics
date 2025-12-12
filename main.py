@@ -119,9 +119,10 @@ def _run_pipeline(
 
     # Build video configuration dynamically
     # Stage 1: Load video
+    video_path = Path(video_path)
     video_config = VideoConfiguration(
         name=video_path.stem,
-        path=Path(video_path),
+        path=video_path,
         scale_factor=scale_factor,
     )
     video_data = VideoLoader().execute(video_config)
