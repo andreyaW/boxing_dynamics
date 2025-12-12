@@ -2,9 +2,7 @@
 
 import click
 import logging
-import os
 import gdown
-import zipfile
 
 from pathlib import Path
 
@@ -65,33 +63,26 @@ def process_video(
 # ---------------------------------------------------------------------
 # DOWNLOAD AND UNZIP A MODEL ONLINE (for website implementation)
 # ---------------------------------------------------------------------
-def get_model_path(model_fidelity: str) -> str:
+def get_model_path(model_fidelity: str) -> Path:
     """
-    Ensures the MediaPipe pose_landmarker task file is downloaded and unzipped.
-    Returns the path to the .task file for MediaPipe to use.
+    Ensures the MediaPipe pose_landmarker task file is downloaded.
+    Returns a Path to the .task file for MediaPipe to use.
     """
     MODEL_URLS = {
         "lite": "https://huggingface.co/mediapipe/pose_landmarker_lite/resolve/main/pose_landmarker_lite.task",
         "heavy": "https://huggingface.co/mediapipe/pose_landmarker_heavy/resolve/main/pose_landmarker_heavy.task",
     }
-    
-    os.makedirs("assets", exist_ok=True)
-    task_path = f"assets/pose_landmarker_{model_fidelity}.task"
-    unzip_dir = f"assets/pose_landmarker_{model_fidelity}_unzipped"
+
+    assets_dir = Path("assets")
+    assets_dir.mkdir(exist_ok=True)
+
+    task_path = assets_dir / f"pose_landmarker_{model_fidelity}.task"
 
     # Download if missing
-    if not os.path.exists(task_path):
+    if not task_path.exists():
         url = MODEL_URLS[model_fidelity]
-        gdown.download(url, task_path, quiet=False)
+        gdown.download(url, str(task_path), quiet=False)
 
-    # Verify and unzip
-    if not os.path.exists(unzip_dir):
-        os.makedirs(unzip_dir, exist_ok=True)
-        try:
-            with zipfile.ZipFile(task_path, 'r') as zip_ref:
-                zip_ref.extractall(unzip_dir)
-        except zipfile.BadZipFile:
-            raise RuntimeError(f"The downloaded task file {task_path} is corrupted.")
     return Path(task_path)
 
 
