@@ -89,6 +89,7 @@ class BoxingPunchMetrics:
     right_wrist_punching_velocity_magnitude: np.ndarray
     left_wrist_punching_velocity_magnitude: np.ndarray
     center_of_mass:  np.ndarray
+    weight_distribution:  np.ndarray
     shoulder_position: np.ndarray # (T, 3, L/R)
     hip_position: np.ndarray
     heel_position: np.ndarray

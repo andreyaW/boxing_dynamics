@@ -246,6 +246,9 @@ class FuseVideoAndBoxingMetrics(
             blit=True,
         )
         return anim
+    
+    def weight_to_distribution_to_visual_bars(self, weight_dist):
+        return max(0, 1 - (weight_dist + 1)/2), max(0, (weight_dist + 1)/2)
 
     def execute(
         self,
@@ -265,7 +268,7 @@ class FuseVideoAndBoxingMetrics(
         ax_rotation = fig.add_subplot(gs[1, 1])
         ax_com = fig.add_subplot(gs[:2, 2])
 
-        ax_rotation.sharex(ax_punch)
+        # ax_rotation.sharex(ax_punch)
 
         num_frames = len(video_data.frames)
 
@@ -279,27 +282,31 @@ class FuseVideoAndBoxingMetrics(
 
         ax_punch.set(
             xlabel="Frame Index",
-            ylabel="Velocity Magnitude (cm/s)",
+            ylabel="Weight distribution",
+            title='COM Balance Left/Right',
+            ylim=(0,2)
         )
         ax_punch.grid(True)
+        weight_distribution = boxing_metrics.weight_distribution
 
-        ax_punch.plot(
-            range(num_frames),
-            left_vel,
-            color="orange",
-            label="Left Wrist",
-        )
-        ax_punch.plot(
-            range(num_frames),
-            right_vel,
-            color="purple",
-            label="Right Wrist",
-        )
-        ax_punch.legend(loc="upper right")
+        left_h, right_h = self.weight_to_distribution_to_visual_bars(weight_distribution[0])
+        bars = ax_punch.bar(["Left", "Right"], [left_h, right_h], color=['red', 'blue'], width=0.4)
 
-        cursor_line_punch_metrics = ax_punch.axvline(
-            0, color="k", linestyle="--"
-        )
+        # ax_punch.plot(
+        #     range(num_frames),
+        #     weight_distribution
+        # )
+        # ax_punch.axhline(-1, color='r', linestyle='-', label="Left Heel")
+        # ax_punch.axhline(0, color='k', linestyle='--', label="Midpoint")
+        # ax_punch.axhline(+1, color='r', linestyle='-', label="Right Heel")
+        # ax_punch.fill_between(range(len(weight_distribution)), -2, -1, color='red', alpha=0.1, label="Outside Left")
+        # ax_punch.fill_between(range(len(weight_distribution)), -1, +1, color='green', alpha=0.1, label="Between Heels")
+        # ax_punch.fill_between(range(len(weight_distribution)), +1, 2, color='red', alpha=0.1, label="Outside Right")
+        # ax_punch.set_yticks([-1, 0, 1], ["Left Heel", "Mid", "Right Heel"])   
+
+        # cursor_line_punch_metrics = ax_punch.axvline(
+        #     0, color="k", linestyle="--"
+        # )
 
         # Plot rotation metrics
         cursor_line_rotation_metrics = None
@@ -427,8 +434,12 @@ class FuseVideoAndBoxingMetrics(
                 [boxing_metrics.center_of_mass[frame_idx, 0]],
                 [boxing_metrics.center_of_mass[frame_idx, 2]],
             )
-            cursor_line_punch_metrics.set_xdata([frame_idx])
-            cursor_lines = [cursor_line_punch_metrics]
+            left_h, right_h = self.weight_to_distribution_to_visual_bars(weight_distribution[frame_idx])
+            bars.patches[0].set_height(left_h)            
+            bars.patches[1].set_height(right_h)
+            # cursor_line_punch_metrics.set_xdata([frame_idx])
+            # cursor_lines = [cursor_line_punch_metrics]
+            cursor_lines = []
             if cursor_line_rotation_metrics:
                 cursor_line_rotation_metrics.set_xdata([frame_idx])
                 cursor_lines.append(cursor_line_rotation_metrics)
@@ -438,7 +449,7 @@ class FuseVideoAndBoxingMetrics(
             shoulder_line.set_data(x_s, z_s)
             x_f, z_f = get_positions(frame_idx, 'heel_position')
             heel_line.set_data(x_f, z_f)
-            return cursor_lines + [im, com_marker, hip_line, shoulder_line, heel_line]
+            return cursor_lines + [im, com_marker, hip_line, shoulder_line, heel_line] + list(bars.patches)
 
         anim = FuncAnimation(
             fig,
