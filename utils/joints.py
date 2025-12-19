@@ -1,20 +1,20 @@
 from mediapipe.python.solutions.pose import PoseLandmark
-
+import numpy as np
 from dataclasses import dataclass
 
 
 @dataclass
 class Joint:
     index: int
-    parent_landmark: PoseLandmark
+    parent_landmark: PoseLandmark | None
     joint_landmark: PoseLandmark
     child_landmark: PoseLandmark
 
-    def get_proximal_limb_landmark_indexes(self):
-        return [self.parent_landmark.value, self.joint_landmark.value]
+    # def get_proximal_limb_landmark_indexes(self):
+    #     return [self.parent_landmark.value, self.joint_landmark.value]
 
-    def get_distal_limb_landmark_indexes(self):
-        return [self.joint_landmark.value, self.child_landmark.value]
+    # def get_distal_limb_landmark_indexes(self):
+    #     return [self.joint_landmark.value, self.child_landmark.value]
 
     def get_landmarks(self):
         return [
@@ -45,6 +45,26 @@ joint_definitions = [
         PoseLandmark.LEFT_ELBOW,
         PoseLandmark.LEFT_WRIST,
     ),
+    (
+        PoseLandmark.LEFT_KNEE,
+        PoseLandmark.LEFT_ANKLE,
+        PoseLandmark.LEFT_FOOT_INDEX,
+    ),
+    (
+        PoseLandmark.RIGHT_KNEE,
+        PoseLandmark.RIGHT_ANKLE,
+        PoseLandmark.RIGHT_FOOT_INDEX,
+    ),
+    (
+        None,
+        PoseLandmark.LEFT_HEEL,
+        PoseLandmark.LEFT_FOOT_INDEX,
+    ),    
+    (
+        None,
+        PoseLandmark.RIGHT_HEEL,
+        PoseLandmark.RIGHT_FOOT_INDEX,
+    ),    
 ]
 
 JOINTS = {

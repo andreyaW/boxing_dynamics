@@ -127,18 +127,22 @@ class FuseVideoAndBoxingMetrics(
         gs = gridspec.GridSpec(3, 2, figure=fig, width_ratios=[1, 3])
         ax_video = fig.add_subplot(gs[:, 0])
         ax_pos = fig.add_subplot(gs[0, 1])
+        ax_pos.set_ylim(0, np.pi)
+        ticks = np.linspace(0, np.pi, 5)
+        ax_pos.set_yticks(ticks)
+        ax_pos.set_yticklabels([f"{np.degrees(t):.0f}°" for t in ticks])
         ax_vel = fig.add_subplot(gs[1, 1], sharex=ax_pos)
         ax_accel = fig.add_subplot(gs[2, 1], sharex=ax_vel)
         joint_name = joint.name
         ax_pos.set(
             title=f"{joint_name} angular pos",
             xlabel="frame idx",
-            ylabel="angle",
+            ylabel="angle (deg)",
         )
         ax_vel.set(
             title=f"{joint_name} angular vel",
             xlabel="frame idx",
-            ylabel="angle/s",
+            ylabel="angle (rad) /s",
         )
         ax_accel.set(
             title=f"{joint_name} angular accel",
@@ -176,15 +180,24 @@ class FuseVideoAndBoxingMetrics(
         frame_rgb = cv2.cvtColor(
             video_data.frames[0].frame, cv2.COLOR_BGR2RGB
         )
-
+        annotated_frame = None
         joint_landmarks = JOINTS[joint].get_landmarks()
-        joint_connections = [(0, 1), (1, 2)]
-        annotated_frame = draw_landmarks_on_image(
-            frame_rgb,
-            landmarkers[0],
-            joint_landmarks,
-            joint_connections,
-        )
+        if all(joint_landmarks):
+            joint_connections = [(0, 1), (1, 2)]
+            annotated_frame = draw_landmarks_on_image(
+                frame_rgb,
+                landmarkers[0],
+                joint_landmarks,
+                joint_connections,
+            )
+        else:
+            joint_connections = [(0, 1)]
+            annotated_frame = draw_landmarks_on_image(
+                frame_rgb,
+                landmarkers[0],
+                [JOINTS[joint].joint_landmark, JOINTS[joint].child_landmark],
+                joint_connections,
+            )
         im = ax_video.imshow(annotated_frame)
         ax_video.axis("off")
 
@@ -193,12 +206,26 @@ class FuseVideoAndBoxingMetrics(
             frame_rgb = cv2.cvtColor(
                 video_data.frames[frame_idx].frame, cv2.COLOR_BGR2RGB
             )
-            annotated_frame = draw_landmarks_on_image(
-                frame_rgb,
-                landmarkers[frame_idx],
-                joint_landmarks,
-                joint_connections,
-            )
+            annotated_frame = frame_rgb
+            joint_landmarks = JOINTS[joint].get_landmarks()
+            annotated_frame = None
+            joint_landmarks = JOINTS[joint].get_landmarks()
+            if all(joint_landmarks):
+                joint_connections = [(0, 1), (1, 2)]
+                annotated_frame = draw_landmarks_on_image(
+                    frame_rgb,
+                    landmarkers[frame_idx],
+                    joint_landmarks,
+                    joint_connections,
+                )
+            else:
+                joint_connections = [(0, 1)]
+                annotated_frame = draw_landmarks_on_image(
+                    frame_rgb,
+                    landmarkers[frame_idx],
+                    [JOINTS[joint].joint_landmark, JOINTS[joint].child_landmark],
+                    joint_connections,
+                )               
             im.set_data(annotated_frame)
             ax_video.set_title(f"Frame {frame_idx+1}/{num_frames}")
             cursor_line_pos.set_xdata([frame_idx])

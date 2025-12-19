@@ -233,7 +233,7 @@ def _run_pipeline(
     "--angular-kinematics",
     "angular_kinematics_joints",
     type=click.Choice(
-        ["left_knee", "right_knee", "left_elbow", "right_elbow"],
+        ["left_knee", "right_knee", "left_elbow", "right_elbow", "left_ankle", "right_ankle", "left_heel", "right_heel"],
         case_sensitive=False,
     ),
     required=False,
