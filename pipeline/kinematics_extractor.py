@@ -53,7 +53,12 @@ class ExtractJointAngularKinematics(
             PoseLandmark.RIGHT_ELBOW,
             PoseLandmark.LEFT_KNEE,
             PoseLandmark.RIGHT_KNEE,
+            PoseLandmark.LEFT_ANKLE,
+            PoseLandmark.RIGHT_ANKLE,
+            PoseLandmark.LEFT_HEEL,
+            PoseLandmark.RIGHT_HEEL
         ]
+        assert all(joint in list(JOINTS.keys()) for joint in desired_joints), "Desired joints for angular kinematics are not defined in JOINTS in joints.py."
         self.logger.info(f"Desired joints for angular kinematics: {desired_joints}")
         joint_3d_angles = np.zeros(
             (input.position.shape[0], len(desired_joints))
@@ -63,12 +68,16 @@ class ExtractJointAngularKinematics(
         joint_3d_angular_accel = np.zeros_like(joint_3d_angles)
 
         for joint in desired_joints:
-            proximal_limb_vector = (
-                input.position[:, JOINTS[joint].parent_landmark]
-                - input.position[:, JOINTS[joint].joint_landmark]
-            )
+            target_joint_position = input.position[:, JOINTS[joint].joint_landmark]
+            if joint in (PoseLandmark.LEFT_HEEL, PoseLandmark.RIGHT_HEEL):
+                proximal_limb_vector = np.tile(np.array([0, 0, 1]), (target_joint_position.shape[0], 1)) # vector on ground plane (XZ) where Z is distance from camera to hips. (-Z) is between camera and hips.
+            else:
+                proximal_limb_vector = (
+                    input.position[:, JOINTS[joint].parent_landmark]
+                    - target_joint_position
+                )
             distal_limb_vector = (
-                input.position[:, JOINTS[joint].joint_landmark]
+                target_joint_position
                 - input.position[:, JOINTS[joint].child_landmark]
             )
             angular_positions = (

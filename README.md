@@ -48,6 +48,9 @@ Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person bo
 | 31    | Left foot index  |
 | 32    | Right foot index |
 
+
+![Google Mediapipe Human Pose Landmarks](./images/GoogleMediaPipeHumanPoseLandmarkDiagram.png)
+https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
 # Usage (PC)
 In order to use the pipeline first clone the repository using : 
 ```

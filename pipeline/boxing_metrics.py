@@ -16,8 +16,8 @@ from pipeline.pipeline import (
 from utils.joints import JOINTS, Joint
 
 from typing import List, Tuple
-
-
+from pathlib import Path
+import json
 class CalculateBoxingMetrics(
     StageBase[
         WorldLandmarkLinearKinematicVariables, BoxingPunchMetrics
@@ -27,6 +27,16 @@ class CalculateBoxingMetrics(
         self, input: WorldLandmarkLinearKinematicVariables
     ) -> BoxingPunchMetrics:
         if input.velocity is not None:
+            com = self.calculate_com(input.position)
+            left_side = input.position[:, PoseLandmark.LEFT_HEEL]
+            right_side = input.position[:, PoseLandmark.RIGHT_HEEL]
+            stance_vector =  left_side - right_side
+            stance_length = np.linalg.norm(stance_vector, axis=1, keepdims=True)
+            stance_dir = stance_vector / stance_length
+            stance_midpoint_vector = (left_side + right_side) / 2
+            stance_mid_to_com = com - stance_midpoint_vector
+            com_proj = np.einsum("ij,ij->i", stance_mid_to_com, stance_dir)
+            weight_dist = com_proj / (stance_length[:, 0] / 2.) # (-1,1) where -1 is left, 1 is right, 0 is mid
             return BoxingPunchMetrics(
                 right_wrist_punching_velocity_magnitude=np.linalg.norm(
                     input.velocity[:, PoseLandmark.RIGHT_WRIST],
@@ -49,7 +59,8 @@ class CalculateBoxingMetrics(
                 shoulder_rotation_velocity_magnitude=self.calculate_shoulder_rotation(
                     input
                 ),
-                center_of_mass=self.calculate_com(input.position),
+                center_of_mass=com,
+                weight_distribution=weight_dist
             )
         else:
             raise NotImplementedError
@@ -82,16 +93,10 @@ class CalculateBoxingMetrics(
 
     def calculate_com(self, position: np.ndarray):
         # https://biomechanist.net/center-of-mass/
-        mass = {
-            "head": 7.6,
-            "torso": 44.2,
-            "upper_arm": 3.2,
-            "lower_arm": 1.7,
-            "hand": 0.9,
-            "thigh": 11.9,
-            "calf": 4.6,
-            "foot": 2,
-        }
+        
+        with open(Path('pipeline/relative_masses.json')) as data:
+            relative_masses = json.load(data)
+        mass = relative_masses['hall']
         pos = {
             "head": lambda: position[:, PoseLandmark.NOSE],
             "torso": lambda: get_torso(),

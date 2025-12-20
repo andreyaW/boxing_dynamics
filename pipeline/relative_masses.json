@@ -1,0 +1,52 @@
+{
+    "harless": {
+        "head": 7.6,
+        "torso": 44.2,
+        "upper_arm": 3.2,
+        "lower_arm": 1.7,
+        "hand": 0.9,
+        "thigh": 11.9,
+        "calf": 4.6,
+        "foot": 2
+        }, 
+    "braune_fischer": {
+        "head": 7.0,
+        "torso": 46.1,
+        "upper_arm": 3.3,
+        "lower_arm": 2.1,
+        "hand": 0.8,
+        "thigh": 10.7,
+        "calf": 4.8,
+        "foot": 1.7
+        }, 
+    "dempster": {
+        "head": 8.1,
+        "torso": 49.7,
+        "upper_arm": 2.8,
+        "lower_arm": 1.6,
+        "hand": 0.6,
+        "thigh": 9.9,
+        "calf": 4.6,
+        "foot": 1.4
+        },
+    "clauser": {
+        "head": 7.3,
+        "torso": 50.7,
+        "upper_arm": 2.6,
+        "lower_arm": 1.6,
+        "hand": 0.7,
+        "thigh": 10.3,
+        "calf": 4.3,
+        "foot": 1.5
+        }, 
+    "hall": {
+        "head": 8.2,
+        "torso": 46.84,
+        "upper_arm": 3.25,
+        "lower_arm": 1.8,
+        "hand": 0.65,
+        "thigh": 10.5,
+        "calf": 4.75,
+        "foot": 1.43
+        }
+}
