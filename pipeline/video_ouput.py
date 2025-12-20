@@ -102,10 +102,10 @@ class FuseVideoAndBoxingMetrics(StageBase):
         return ax
     
     def init_weight_dist_axes(self, fig, gs, initial_weight_distribution):
-        ax = fig.add_subplot(gs[1, 0])
+        ax= fig.add_subplot(gs[2,1:3])
         left_h, right_h = self.weight_to_distribution_to_visual_bars(initial_weight_distribution)
         bars = ax.bar(["Left", "Right"], [left_h, right_h], color=['red', 'blue'], width=0.4)        
-        ax.axis("off")
+        ax.grid(True)
         ax.set(
             xlabel="Frame Index",
             ylabel="Weight distribution",
