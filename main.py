@@ -197,6 +197,7 @@ def _run_pipeline(
 @click.argument(
     "output_dir",
     type=click.Path(path_type=Path, dir_okay=True, file_okay=False),
+    required=False, default="output"
 )
 @click.option(
     "--no-metrics",
