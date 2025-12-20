@@ -43,6 +43,7 @@ class FuseVideoAndBoxingMetrics(StageBase):
         ax_video = self.init_video_axes(fig, gs, video_data)
         gauge_axes, needles, center_texts, metrics = self.init_gauge_axes(fig, gs, boxing_metrics)
         ax_com, com_marker, com_path_line, hip_line, shoulder_line, heel_line = self.init_com_axes(fig, gs, boxing_metrics)
+        ax_weight_dist, weight_dist_bars = self.init_weight_dist_axes(fig, gs, boxing_metrics.weight_distribution[0])
 
         #--------------------------
         # Helper function
@@ -79,7 +80,12 @@ class FuseVideoAndBoxingMetrics(StageBase):
             x_f, z_f = self.get_positions(boxing_metrics, frame_idx, 'heel_position')
             heel_line.set_data(x_f, z_f)
 
-            return [ax_video.images[0], com_marker, com_path_line, hip_line, shoulder_line, heel_line] + needles + center_texts
+            # Update weight distribution
+            left_h, right_h = self.weight_to_distribution_to_visual_bars(boxing_metrics.weight_distribution[frame_idx])
+            weight_dist_bars.patches[0].set_height(left_h)            
+            weight_dist_bars.patches[1].set_height(right_h)            
+
+            return [ax_video.images[0], com_marker, com_path_line, hip_line, shoulder_line, heel_line] + needles + center_texts + list(weight_dist_bars.patches)
 
 
         anim = FuncAnimation(fig, update, frames=num_frames, interval=int(1e3/video_data.fps), blit=True)
@@ -94,6 +100,19 @@ class FuseVideoAndBoxingMetrics(StageBase):
         ax.imshow(frame_rgb)
         ax.axis("off")
         return ax
+    
+    def init_weight_dist_axes(self, fig, gs, initial_weight_distribution):
+        ax = fig.add_subplot(gs[1, 0])
+        left_h, right_h = self.weight_to_distribution_to_visual_bars(initial_weight_distribution)
+        bars = ax.bar(["Left", "Right"], [left_h, right_h], color=['red', 'blue'], width=0.4)        
+        ax.axis("off")
+        ax.set(
+            xlabel="Frame Index",
+            ylabel="Weight distribution",
+            title='COM Balance Left/Right',
+            ylim=(0,2)
+        )
+        return ax, bars
 
     def init_gauge_axes(self, fig, gs, boxing_metrics):
         """
