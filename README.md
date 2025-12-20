@@ -9,7 +9,7 @@ pinned: false
 
 # Boxing Dynamics
 
-Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches (jab, corss, hooks or uppercuts). The pipieline will automatically analyze the video using Google's Pose Landmark Detection software [Mediapipe](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/python) to detect the motion of 33 pose keypoints throughout the video. The keypoints are defined as shown in the table below. The output from the pipeline will be the input video with measured hip and shoulder rotations, as well as the hand velocity of both the left and right hands. These measurements directly correlate to an overall punch force metric. This project can be acessed online at the following huggingface space: [boxing-dynamics-demo](https://huggingface.co/spaces/adware74/boxing-dynamics-app). Alternatively, one can utilize this pipeline locally by following the usage instructions below.
+Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person boxing. The input to the pipeline is videos of person throwing a variety of punches (jab, corss, hooks or uppercuts). The pipieline will automatically analyze the video using Google's Pose Landmark Detection software [Mediapipe](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/python) to detect the motion of 33 pose keypoints throughout the video. The [Google Mediapipe Human Pose Landmarks](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker) are defined as shown in the table below. The output from the pipeline will be the input video with measured hip and shoulder rotations, as well as the hand velocity of both the left and right hands. These measurements directly correlate to an overall punch force metric. This project can be acessed online at the following huggingface space: [boxing-dynamics-demo](https://huggingface.co/spaces/adware74/boxing-dynamics-app). Alternatively, one can utilize this pipeline locally by following the usage instructions below.
 
 ### Pose Detection Landmarks
 | Index | Landmark        |
@@ -49,8 +49,6 @@ Boxing Dynamics is a Python pipeline for analyzing the kinematics of a person bo
 | 32    | Right foot index |
 
 
-![Google Mediapipe Human Pose Landmarks](./images/GoogleMediaPipeHumanPoseLandmarkDiagram.png)
-https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
 # Usage (PC)
 In order to use the pipeline first clone the repository using : 
 ```

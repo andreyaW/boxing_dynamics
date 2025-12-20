@@ -16,3 +16,6 @@ media/
 *.mp4
 *.gif
 output/
+
+# image files
+.png
