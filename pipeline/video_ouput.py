@@ -39,7 +39,7 @@ class FuseVideoAndBoxingMetrics(StageBase):
         # Video left, 2x2 gauges center, COM animation right
         # ---------------------------
         fig = plt.figure(figsize=(20, 10))
-        gs = fig.add_gridspec(2, 4, width_ratios=[2, 1, 1, 2], hspace=0.4, wspace=0.4)
+        gs = fig.add_gridspec(3, 4, width_ratios=[2, 1, 1, 2], hspace=0.4, wspace=0.4)
         ax_video = self.init_video_axes(fig, gs, video_data)
         gauge_axes, needles, center_texts, metrics = self.init_gauge_axes(fig, gs, boxing_metrics)
         ax_com, com_marker, com_path_line, hip_line, shoulder_line, heel_line = self.init_com_axes(fig, gs, boxing_metrics)
@@ -212,3 +212,6 @@ class FuseVideoAndBoxingMetrics(StageBase):
         idx1, idx2 = 0, 2
         pos = getattr(boxing_metrics, key)
         return [pos[frame_idx, idx1, 0], pos[frame_idx, idx1, 1]], [pos[frame_idx, idx2, 0], pos[frame_idx, idx2, 1]]
+
+    def weight_to_distribution_to_visual_bars(self, weight_dist):
+        return max(0, 1 - (weight_dist + 1)/2), max(0, (weight_dist + 1)/2)        
